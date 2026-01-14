@@ -56,6 +56,13 @@ using (var scope = app.Services.CreateScope())
     {
         var db = scope.ServiceProvider.GetRequiredService<test_ins.Persistence.ShortenerDbContext>();
         db.Database.Migrate();
+
+        // Seed a development user if none exist to simplify local testing under Postgres.
+        if (!db.Users.Any())
+        {
+            db.Users.Add(new test_ins.Models.User { Email = "dev@example.local", ApiKey = "dev-api-key-123" });
+            db.SaveChanges();
+        }
     }
 }
 

@@ -30,5 +30,28 @@ This document explains how to use the Postgres persistence scaffold included in 
 
 5. Run the app. If using Docker Compose, the `api` service depends on the `db` service; when the API starts it will auto-apply the included initial migration and be ready to accept requests.
 
+## Demo: Docker Compose quickstart
+
+1. Ensure Docker is installed and the daemon is running.
+
+2. From the repository root run:
+
+   docker compose up --build -d
+
+   This will start Postgres and build/run the API. The API will auto-apply the included migration and seed a dev user with API key `dev-api-key-123` if the users table is empty.
+
+3. Verify the API is reachable: `curl -I http://localhost:5000/` or open `http://localhost:5000/swagger`.
+
+4. Example quick test:
+
+   - Get current user (using seeded dev key):
+     curl -H "X-Api-Key: dev-api-key-123" http://localhost:5000/users/me
+
+   - Create a short URL:
+     curl -X POST -H "X-Api-Key: dev-api-key-123" -H "Content-Type: application/json" -d '{"destination":"https://example.com"}' http://localhost:5000/urls
+
+5. To tear down: `docker compose down -v` (this removes the database volume).
+
+
 ## Notes
 - This is scaffold code intended for development and demonstration; production concerns (connection pooling, retry policies, migrations orchestration, secrets management) are not fully addressed here and should be implemented prior to production rollout.
