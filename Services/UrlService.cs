@@ -19,11 +19,13 @@ namespace test_ins.Services
     public class UrlService : IUrlService
     {
         private readonly Repositories.IRepo _repo;
+        private readonly Microsoft.Extensions.Logging.ILogger<UrlService> _logger;
         private static readonly Regex AliasRegex = new("^[a-zA-Z0-9_-]{4,40}$");
 
-        public UrlService(Repositories.IRepo repo)
+        public UrlService(Repositories.IRepo repo, Microsoft.Extensions.Logging.ILogger<UrlService> logger)
         {
             _repo = repo;
+            _logger = logger;
         }
 
         private string GenerateShortCode()
@@ -36,16 +38,25 @@ namespace test_ins.Services
         public ShortUrl Create(User owner, ShortUrlCreate req)
         {
             if (!Uri.TryCreate(req.Destination, UriKind.Absolute, out var _))
+            {
+                _logger.LogWarning("Invalid destination URL provided by user {OwnerId}", owner.UserId);
                 throw new ArgumentException("Invalid destination url");
+            }
 
             var shortCode = req.CustomAlias;
             if (!string.IsNullOrWhiteSpace(shortCode))
             {
                 if (!AliasRegex.IsMatch(shortCode))
+                {
+                    _logger.LogWarning("Invalid custom alias '{Alias}' provided by user {OwnerId}", shortCode, owner.UserId);
                     throw new ArgumentException("Invalid custom alias");
+                }
 
                 if (_repo.GetByShortCode(shortCode) != null)
+                {
+                    _logger.LogWarning("Attempt to use already-existing alias '{Alias}' by user {OwnerId}", shortCode, owner.UserId);
                     throw new ArgumentException("Alias already in use");
+                }
             }
             else
             {
@@ -61,7 +72,9 @@ namespace test_ins.Services
                 CustomAlias = req.CustomAlias
             };
 
-            return _repo.CreateShortUrl(s);
+            var created = _repo.CreateShortUrl(s);
+            _logger.LogInformation("Created short URL {ShortCode} (id={Id}) for owner {OwnerId}", created.ShortCode, created.Id, owner.UserId);
+            return created;
         }
 
         public ShortUrl? GetById(Guid id) => _repo.GetShortUrl(id);

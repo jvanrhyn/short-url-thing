@@ -10,20 +10,29 @@ namespace test_ins.Repositories
     public class PostgresRepo : IRepo
     {
         private readonly ShortenerDbContext _db;
+        private readonly Microsoft.Extensions.Logging.ILogger<PostgresRepo> _logger;
 
-        public PostgresRepo(ShortenerDbContext db)
+        public PostgresRepo(ShortenerDbContext db, Microsoft.Extensions.Logging.ILogger<PostgresRepo> logger)
         {
             _db = db;
+            _logger = logger;
         }
 
         // Users
-        public User? GetUserByApiKey(string apiKey) => _db.Users.FirstOrDefault(u => u.ApiKey == apiKey);
+        public User? GetUserByApiKey(string apiKey)
+        {
+            var u = _db.Users.FirstOrDefault(u => u.ApiKey == apiKey);
+            if (u == null) _logger.LogDebug("No user found for provided API key");
+            return u;
+        }
+
         public User? GetUser(Guid id) => _db.Users.Find(id);
         public IEnumerable<User> ListUsers() => _db.Users.AsNoTracking().ToList();
         public void AddUser(User user)
         {
             _db.Users.Add(user);
             _db.SaveChanges();
+            _logger.LogInformation("Added user {UserId}", user.UserId);
         }
 
         // ShortUrls

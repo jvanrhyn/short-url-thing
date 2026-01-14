@@ -7,8 +7,17 @@ using test_ins.Services;
 using test_ins.DTOs;
 using test_ins.Models;
 using Microsoft.EntityFrameworkCore;
+using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Serilog configuration - read from appsettings and wire into Generic Host
+Log.Logger = new LoggerConfiguration()
+    .ReadFrom.Configuration(builder.Configuration)
+    .Enrich.FromLogContext()
+    .CreateLogger();
+
+builder.Host.UseSerilog();
 
 // Register repository: prefer Postgres when a connection string is configured, otherwise fall back to in-memory for local dev.
 var conn = builder.Configuration.GetConnectionString("DefaultConnection");
@@ -39,13 +48,49 @@ builder.Services.AddSwaggerGen(options =>
 
 var app = builder.Build();
 
-if (app.Environment.IsDevelopment())
+try
 {
-    app.UseSwagger();
-    app.UseSwaggerUI();
+    Log.Information("Starting application");
+
+    if (app.Environment.IsDevelopment())
+    {
+        app.UseSwagger();
+        app.UseSwaggerUI();
+    }
+
+    app.UseApiKeyAuth();
+
+    // Apply pending EF Core migrations at startup when Postgres is configured (safe for dev/demo use). In production consider an explicit migration pipeline.
+    using (var scope = app.Services.CreateScope())
+    {
+        var cfg = scope.ServiceProvider.GetService<Microsoft.Extensions.Configuration.IConfiguration>();
+        var cs = cfg?.GetConnectionString("DefaultConnection");
+        if (!string.IsNullOrWhiteSpace(cs))
+        {
+            var db = scope.ServiceProvider.GetRequiredService<test_ins.Persistence.ShortenerDbContext>();
+            db.Database.Migrate();
+
+            // Seed a development user if none exist to simplify local testing under Postgres.
+            if (!db.Users.Any())
+            {
+                db.Users.Add(new test_ins.Models.User { Email = "dev@example.local", ApiKey = "dev-api-key-123" });
+                db.SaveChanges();
+            }
+        }
+    }
+}
+catch (Exception ex)
+{
+    Log.Fatal(ex, "Unhandled exception during startup");
+    throw;
+}
+finally
+{
+    // Ensure logs are flushed when application stops
+    AppDomain.CurrentDomain.ProcessExit += (s, e) => Log.CloseAndFlush();
 }
 
-app.UseApiKeyAuth();
+app.Lifetime.ApplicationStopped.Register(() => Log.CloseAndFlush());
 
 // Apply pending EF Core migrations at startup when Postgres is configured (safe for dev/demo use). In production consider an explicit migration pipeline.
 using (var scope = app.Services.CreateScope())
@@ -69,11 +114,12 @@ using (var scope = app.Services.CreateScope())
 // Note: for Postgres users, set the connection string under "ConnectionStrings:DefaultConnection" in appsettings or environment variables.
 
 
-app.MapPost("/users", (User user, IRepo repo) =>
+app.MapPost("/users", (User user, IRepo repo, ILogger<Program> logger) =>
 {
     user.UserId = Guid.NewGuid();
     user.ApiKey = Guid.NewGuid().ToString();
     repo.AddUser(user);
+    logger.LogInformation("Created new user {UserId}", user.UserId);
     return Results.Created($"/users/{user.UserId}", user);
 });
 
@@ -84,7 +130,7 @@ app.MapGet("/users/me", (HttpContext ctx) =>
     return Results.Ok(user);
 });
 
-app.MapPost("/urls", (ShortUrlCreate req, HttpContext ctx, IUrlService urlService) =>
+app.MapPost("/urls", (ShortUrlCreate req, HttpContext ctx, IUrlService urlService, ILogger<Program> logger) =>
 {
     if (!ctx.Items.TryGetValue("User", out var u) || u is not User user)
         return Results.Unauthorized();
@@ -92,10 +138,12 @@ app.MapPost("/urls", (ShortUrlCreate req, HttpContext ctx, IUrlService urlServic
     try
     {
         var s = urlService.Create(user, req);
+        logger.LogInformation("User {UserId} created short url {ShortCode} (id={Id})", user.UserId, s.ShortCode, s.Id);
         return Results.Created($"/urls/{s.Id}", s);
     }
     catch (ArgumentException ex)
     {
+        logger.LogWarning("User {UserId} provided invalid url create request: {Detail}", user.UserId, ex.Message);
         return Results.BadRequest(new { error = "invalid_request", detail = ex.Message });
     }
 });
@@ -159,18 +207,23 @@ app.MapGet("/urls/{id}/stats", (Guid id, HttpContext ctx, IUrlService urlService
     return Results.Ok(new { redirects = s.RedirectCount, createdAt = s.CreatedAt, updatedAt = s.UpdatedAt });
 });
 
-app.MapGet("/r/{shortCode}", (string shortCode, IUrlService urlService) =>
+app.MapGet("/r/{shortCode}", (string shortCode, IUrlService urlService, ILogger<Program> logger) =>
 {
     var s = urlService.GetByShortCode(shortCode);
     if (s == null)
+    {
+        logger.LogInformation("Redirect requested for unknown shortCode {ShortCode}", shortCode);
         return Results.NotFound(new { error = "not_found" });
+    }
 
     if (s.Status != UrlStatus.Active || (s.ExpiresAt.HasValue && s.ExpiresAt.Value < DateTimeOffset.UtcNow))
     {
+        logger.LogInformation("Blocked redirect for shortCode {ShortCode} due to status {Status}", shortCode, s.Status);
         return Results.StatusCode((int)HttpStatusCode.Gone);
     }
 
     urlService.IncrementRedirect(s);
+    logger.LogInformation("Redirecting shortCode {ShortCode} to {Destination} (owner={Owner})", s.ShortCode, s.Destination, s.OwnerUserId);
     var response = Results.Redirect(s.Destination, true);
     return response;
 });

@@ -9,11 +9,13 @@ namespace test_ins.Middleware
     {
         private readonly RequestDelegate _next;
         private readonly Repositories.IRepo _repo;
+        private readonly Microsoft.Extensions.Logging.ILogger<ApiKeyAuthMiddleware> _logger;
 
-        public ApiKeyAuthMiddleware(RequestDelegate next, Repositories.IRepo repo)
+        public ApiKeyAuthMiddleware(RequestDelegate next, Repositories.IRepo repo, Microsoft.Extensions.Logging.ILogger<ApiKeyAuthMiddleware> logger)
         {
             _next = next;
             _repo = repo;
+            _logger = logger;
         }
 
         public async Task Invoke(HttpContext context)
@@ -28,6 +30,7 @@ namespace test_ins.Middleware
 
             if (!context.Request.Headers.TryGetValue("X-Api-Key", out var key))
             {
+                _logger.LogWarning("Missing API key for request to {Path}", path);
                 context.Response.StatusCode = (int)HttpStatusCode.Unauthorized;
                 await context.Response.WriteAsJsonAsync(new { error = "missing_api_key" });
                 return;
@@ -36,10 +39,13 @@ namespace test_ins.Middleware
             var user = _repo.GetUserByApiKey(key.ToString());
             if (user == null || user.Status != test_ins.Models.UserStatus.Active)
             {
+                _logger.LogWarning("Invalid or suspended API key attempt to {Path}", path);
                 context.Response.StatusCode = (int)HttpStatusCode.Forbidden;
                 await context.Response.WriteAsJsonAsync(new { error = "invalid_api_key_or_suspended_user" });
                 return;
             }
+
+            _logger.LogDebug("Authenticated user {UserId} for request to {Path}", user.UserId, path);
 
             // attach user id to context for handlers
             context.Items["User"] = user;
