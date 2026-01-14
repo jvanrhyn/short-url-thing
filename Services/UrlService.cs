@@ -18,10 +18,10 @@ namespace test_ins.Services
 
     public class UrlService : IUrlService
     {
-        private readonly InMemoryRepo _repo;
+        private readonly Repositories.IRepo _repo;
         private static readonly Regex AliasRegex = new("^[a-zA-Z0-9_-]{4,40}$");
 
-        public UrlService(InMemoryRepo repo)
+        public UrlService(Repositories.IRepo repo)
         {
             _repo = repo;
         }

@@ -6,11 +6,23 @@ using test_ins.Repositories;
 using test_ins.Services;
 using test_ins.DTOs;
 using test_ins.Models;
+using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddSingleton<InMemoryRepo>();
-builder.Services.AddSingleton<IUrlService, UrlService>();
+// Register repository: prefer Postgres when a connection string is configured, otherwise fall back to in-memory for local dev.
+var conn = builder.Configuration.GetConnectionString("DefaultConnection");
+if (!string.IsNullOrWhiteSpace(conn))
+{
+    builder.Services.AddDbContext<test_ins.Persistence.ShortenerDbContext>(options => options.UseNpgsql(conn));
+    builder.Services.AddScoped<test_ins.Repositories.IRepo, test_ins.Repositories.PostgresRepo>();
+    builder.Services.AddScoped<IUrlService, UrlService>();
+}
+else
+{
+    builder.Services.AddSingleton<test_ins.Repositories.IRepo, test_ins.Repositories.InMemoryRepo>();
+    builder.Services.AddScoped<IUrlService, UrlService>();
+}
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
@@ -34,7 +46,10 @@ if (app.Environment.IsDevelopment())
 
 app.UseApiKeyAuth();
 
-app.MapPost("/users", (User user, InMemoryRepo repo) =>
+// Note: for Postgres users, set the connection string under "ConnectionStrings:DefaultConnection" in appsettings or environment variables.
+
+
+app.MapPost("/users", (User user, IRepo repo) =>
 {
     user.UserId = Guid.NewGuid();
     user.ApiKey = Guid.NewGuid().ToString();
@@ -65,7 +80,7 @@ app.MapPost("/urls", (ShortUrlCreate req, HttpContext ctx, IUrlService urlServic
     }
 });
 
-app.MapGet("/urls", (HttpContext ctx, InMemoryRepo repo) =>
+app.MapGet("/urls", (HttpContext ctx, IRepo repo) =>
 {
     if (!ctx.Items.TryGetValue("User", out var u) || u is not User user)
         return Results.Unauthorized();

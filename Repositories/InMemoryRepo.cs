@@ -6,7 +6,7 @@ using test_ins.Models;
 
 namespace test_ins.Repositories
 {
-    public class InMemoryRepo
+    public class InMemoryRepo : IRepo
     {
         private readonly ConcurrentDictionary<Guid, User> _users = new();
         private readonly ConcurrentDictionary<Guid, ShortUrl> _urls = new();

@@ -8,9 +8,9 @@ namespace test_ins.Middleware
     public class ApiKeyAuthMiddleware
     {
         private readonly RequestDelegate _next;
-        private readonly InMemoryRepo _repo;
+        private readonly Repositories.IRepo _repo;
 
-        public ApiKeyAuthMiddleware(RequestDelegate next, InMemoryRepo repo)
+        public ApiKeyAuthMiddleware(RequestDelegate next, Repositories.IRepo repo)
         {
             _next = next;
             _repo = repo;
