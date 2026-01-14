@@ -18,12 +18,17 @@ This document explains how to use the Postgres persistence scaffold included in 
 
    dotnet tool install --global dotnet-ef
 
-4. Create and apply migrations from the repository root:
+4. Create and apply migrations from the repository root (option A: `dotnet-ef`, option B: auto-migrate on startup)
 
-   dotnet ef migrations add InitialCreate --project test-ins --startup-project test-ins
-   dotnet ef database update --project test-ins --startup-project test-ins
+   Option A (if you prefer `dotnet ef` locally):
 
-5. Run the app. It will use Postgres for persistence.
+   - Install EF CLI if not installed: `dotnet tool install --global dotnet-ef`
+   - Create migration: `dotnet ef migrations add InitialCreate --project test-ins --startup-project test-ins`
+   - Apply: `dotnet ef database update --project test-ins --startup-project test-ins`
+
+   Option B (recommended for demo): Auto-migrate at startup — the app will call `db.Database.Migrate()` during startup when it detects a `DefaultConnection`, so running under Docker Compose (below) will automatically apply the migration included in source.
+
+5. Run the app. If using Docker Compose, the `api` service depends on the `db` service; when the API starts it will auto-apply the included initial migration and be ready to accept requests.
 
 ## Notes
 - This is scaffold code intended for development and demonstration; production concerns (connection pooling, retry policies, migrations orchestration, secrets management) are not fully addressed here and should be implemented prior to production rollout.

@@ -24,6 +24,7 @@ else
     builder.Services.AddScoped<IUrlService, UrlService>();
 }
 
+
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
 {
@@ -45,6 +46,18 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseApiKeyAuth();
+
+// Apply pending EF Core migrations at startup when Postgres is configured (safe for dev/demo use). In production consider an explicit migration pipeline.
+using (var scope = app.Services.CreateScope())
+{
+    var cfg = scope.ServiceProvider.GetService<Microsoft.Extensions.Configuration.IConfiguration>();
+    var cs = cfg?.GetConnectionString("DefaultConnection");
+    if (!string.IsNullOrWhiteSpace(cs))
+    {
+        var db = scope.ServiceProvider.GetRequiredService<test_ins.Persistence.ShortenerDbContext>();
+        db.Database.Migrate();
+    }
+}
 
 // Note: for Postgres users, set the connection string under "ConnectionStrings:DefaultConnection" in appsettings or environment variables.
 
