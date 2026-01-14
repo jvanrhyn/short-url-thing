@@ -228,4 +228,7 @@ app.MapGet("/r/{shortCode}", (string shortCode, IUrlService urlService, ILogger<
     return response;
 });
 
+// Health endpoint used by docker-compose healthcheck (no auth required)
+app.MapGet("/health", () => Results.Ok(new { status = "ok" }));
+
 app.Run();

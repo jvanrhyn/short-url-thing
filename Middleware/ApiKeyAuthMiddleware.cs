@@ -20,9 +20,9 @@ namespace test_ins.Middleware
 
         public async Task Invoke(HttpContext context)
         {
-            // allow anonymous for redirect path
+            // allow anonymous for redirect path and health checks
             var path = context.Request.Path.Value ?? string.Empty;
-            if (path.StartsWith("/r/", System.StringComparison.OrdinalIgnoreCase))
+            if (path.StartsWith("/r/", System.StringComparison.OrdinalIgnoreCase) || path.Equals("/health", System.StringComparison.OrdinalIgnoreCase))
             {
                 await _next(context);
                 return;
