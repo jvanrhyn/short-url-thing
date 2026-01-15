@@ -1,4 +1,3 @@
-#if false // tests temporarily disabled for net10 build compatibility; enable when test SDK is available
 using System;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using test_ins.Repositories;
@@ -32,4 +31,3 @@ namespace test_ins.Tests
         }
     }
 }
-#endif

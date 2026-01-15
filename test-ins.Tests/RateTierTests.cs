@@ -1,4 +1,3 @@
-#if false // disabled; enable once test SDK supports net10 in CI
 using System;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using test_ins.Repositories;
@@ -28,4 +27,3 @@ namespace test_ins.Tests
         }
     }
 }
-#endif

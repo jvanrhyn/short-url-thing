@@ -449,3 +449,6 @@ app.MapGet("/audits/user/{id}", (Guid id, HttpContext ctx, IRepo repo) =>
 });
 
 app.Run();
+
+// expose Program for WebApplicationFactory in integration tests
+public partial class Program { }

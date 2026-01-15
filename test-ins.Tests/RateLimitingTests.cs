@@ -1,4 +1,3 @@
-#if false // disabled due to test SDK compatibility with net10
 using System;
 using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -49,4 +48,3 @@ namespace test_ins.Tests
         }
     }
 }
-#endif
