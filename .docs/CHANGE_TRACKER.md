@@ -19,3 +19,5 @@
 2026-01-15 | feat(ci-and-tests): add integration tests using `WebApplicationFactory<Program>` for user/url/redirect/stats and admin-created tiny tier + rate-limiting test; add `Microsoft.AspNetCore.Mvc.Testing` to test project and ensure `Program` is exposed for testing; update CHANGE_TRACKER entry. | scope: tests, ci | risk: low | breaking_change: false
 
 2026-01-15 | feat(ci-postgres): run integration tests against a Postgres service in CI; add Postgres service to `.github/workflows/ci.yml`, wait for availability, and pass `ConnectionStrings__DefaultConnection` to test step so the app runs using Postgres in tests. | scope: tests, ci | risk: low | breaking_change: false
+
+2026-01-15 | feat(ci-coverage): collect code coverage during CI tests using Coverlet (XPlat Code Coverage), publish coverage artifact, upload to Codecov, and add coverage badge to `README.md`. Update CI to run `dotnet test --collect:"XPlat Code Coverage"`, upload artifact, and call `codecov/codecov-action@v4`. | scope: tests, ci | risk: low | breaking_change: false

@@ -48,7 +48,29 @@ jobs:
       - name: Build
         run: dotnet build --no-restore --configuration Release --verbosity minimal
 
-      - name: Test (in-memory + DB-backed integration)
+      - name: Test (in-memory + DB-backed integration) with coverage
         env:
           ConnectionStrings__DefaultConnection: "Host=127.0.0.1;Port=5432;Username=postgres;Password=postgres;Database=test_ins"
-        run: dotnet test --no-build --verbosity normal
+        run: dotnet test --no-build --verbosity normal --collect:"XPlat Code Coverage"
+
+      - name: Publish coverage artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: |
+            **/coverage.cobertura.xml
+            **/coverage.xml
+            test-results/**
+
+      - name: Upload to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          files: |
+            **/coverage.cobertura.xml
+            **/coverage.xml
+          fail_ci_if_error: false
+          verbose: true
+        env:
+          # Optional: configure CODECOV_TOKEN in repo secrets if needed for private repos
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
