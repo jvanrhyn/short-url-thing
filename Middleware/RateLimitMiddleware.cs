@@ -63,7 +63,10 @@ namespace test_ins.Middleware
                 });
 
             var cur = _counters[windowKey];
-            if (cur.count > _opts.RequestsPerMinute)
+
+            // honor per-user rate limit if set, otherwise use global
+            var limit = user.RateLimitRpm ?? _opts.RequestsPerMinute;
+            if (cur.count > limit)
             {
                 var retryAfter = 60 - (int)(now - cur.windowStart).TotalSeconds;
                 _logger.LogWarning("Rate limit exceeded for user {UserId} on {Path}", user.UserId, path);

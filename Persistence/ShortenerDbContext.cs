@@ -18,6 +18,7 @@ namespace test_ins.Persistence
             {
                 b.HasKey(u => u.UserId);
                 b.HasIndex(u => u.ApiKey).IsUnique(false);
+                b.Property(u => u.RateLimitRpm).IsRequired(false);
             });
 
             modelBuilder.Entity<ShortUrl>(b =>

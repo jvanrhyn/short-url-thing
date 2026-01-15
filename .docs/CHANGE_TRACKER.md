@@ -8,4 +8,6 @@
 
 2026-01-15 | feature/audit-trail | add AuditEvent model, DB migration, repo methods, record audits for user create and shorturl create/update/delete, add audit query endpoints for shorturl and user, add test scaffolding and CHANGE_TRACKER entry. | scope: audit logging | risk: low | breaking_change: false
 
-2026-01-15 | feature/rate-limiting | add in-memory fixed-window per-user rate limiting middleware, configuration via `RateLimiting` section, excluded paths `/r/` and `/health`, return 429 with `Retry-After` when exceeded; add test scaffold and CHANGE_TRACKER entry. | scope: rate limiting | risk: low | breaking_change: false
+2026-01-15 | feature/rate-limiting | add in-memory fixed-window per-user rate limiting middleware, configuration via `RateLimiting` section, excluded paths `/r/` and `/health`, return 429 with `Retry-After` when exceeded; add test scaffold and CHANGE_TRACKER entry.
+
+2026-01-15 | feature/rate-limiting | add per-user rate limit support: `User.RateLimitRpm`, DB migration, `IRepo.UpdateUser`, `PATCH /users/me/rate-limit` endpoint, `GET /rate-tiers` to list available tiers, middleware honors per-user limit when set. | scope: rate tiers | risk: low | breaking_change: false

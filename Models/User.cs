@@ -8,5 +8,7 @@ namespace test_ins.Models
         public string Email { get; set; } = string.Empty;
         public UserStatus Status { get; set; } = UserStatus.Active;
         public string ApiKey { get; set; } = string.Empty; // dev-only: in-memory
+        // Per-user rate limit (requests per minute). Null => use default tier
+        public int? RateLimitRpm { get; set; }
     }
 }

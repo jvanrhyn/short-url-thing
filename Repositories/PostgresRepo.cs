@@ -36,6 +36,13 @@ namespace test_ins.Repositories
             _logger.LogInformation("Added user {UserId}", user.UserId);
         }
 
+        public void UpdateUser(User user)
+        {
+            _db.Users.Update(user);
+            _db.SaveChanges();
+            _logger.LogInformation("Updated user {UserId}", user.UserId);
+        }
+
         // ShortUrls
         public ShortUrl CreateShortUrl(ShortUrl s)
         {

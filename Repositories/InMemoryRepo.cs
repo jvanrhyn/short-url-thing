@@ -31,6 +31,7 @@ namespace test_ins.Repositories
         public User? GetUser(Guid id) => _users.TryGetValue(id, out var u) ? u : null;
         public IEnumerable<User> ListUsers() => _users.Values;
         public void AddUser(User user) => _users[user.UserId] = user;
+        public void UpdateUser(User user) => _users[user.UserId] = user;
 
         // ShortUrls
         public ShortUrl CreateShortUrl(ShortUrl s)

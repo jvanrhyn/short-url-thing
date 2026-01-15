@@ -11,6 +11,7 @@ namespace test_ins.Repositories
         User? GetUser(Guid id);
         IEnumerable<User> ListUsers();
         void AddUser(User user);
+        void UpdateUser(User user);
 
         // ShortUrls
         ShortUrl CreateShortUrl(ShortUrl s);
