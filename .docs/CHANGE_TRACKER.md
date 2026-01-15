@@ -15,3 +15,7 @@
 2026-01-15 | feature/admin-rate-tiers | add admin-managed tier assignment and validation: `User.IsAdmin`, DB migration, admin endpoints `GET /admin/users` and `PATCH /admin/users/{id}/rate-tier`, self-service tier assignment restricted for non-admins (enterprise requires admin), audit events added for tier changes, and tests scaffold. | scope: admin management | risk: low | breaking_change: false
 
 2026-01-15 | feature/admin-rate-tiers | make rate tiers DB-backed: add `RateTierEntity` model, `RateTierEntities` table, repo CRUD methods (`CreateRateTier`, `GetRateTier`, `GetRateTierByName`, `ListRateTiers`, `UpdateRateTier`, `DeleteRateTier`), seed default tiers in migration and in-memory repo, and add admin CRUD endpoints `GET/POST/PATCH/DELETE /admin/tiers`. | scope: admin management, db | risk: low | breaking_change: false
+
+2026-01-15 | feat(ci-and-tests): add integration tests using `WebApplicationFactory<Program>` for user/url/redirect/stats and admin-created tiny tier + rate-limiting test; add `Microsoft.AspNetCore.Mvc.Testing` to test project and ensure `Program` is exposed for testing; update CHANGE_TRACKER entry. | scope: tests, ci | risk: low | breaking_change: false
+
+2026-01-15 | feat(ci-postgres): run integration tests against a Postgres service in CI; add Postgres service to `.github/workflows/ci.yml`, wait for availability, and pass `ConnectionStrings__DefaultConnection` to test step so the app runs using Postgres in tests. | scope: tests, ci | risk: low | breaking_change: false
