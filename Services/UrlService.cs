@@ -79,7 +79,11 @@ namespace test_ins.Services
 
         public ShortUrl? GetById(Guid id) => _repo.GetShortUrl(id);
         public ShortUrl? GetByShortCode(string code) => _repo.GetByShortCode(code);
-        public void IncrementRedirect(ShortUrl s) => _repo.IncrementRedirect(s);
+        public void IncrementRedirect(ShortUrl s)
+        {
+            _repo.IncrementRedirect(s);
+            _repo.AddRedirectEvent(new Models.RedirectEvent { ShortUrlId = s.Id, Timestamp = DateTimeOffset.UtcNow });
+        }
         public void Update(ShortUrl s, ShortUrlUpdate update)
         {
             if (update.Status.HasValue)

@@ -9,6 +9,7 @@ namespace test_ins.Persistence
 
         public DbSet<User> Users { get; set; } = null!;
         public DbSet<ShortUrl> ShortUrls { get; set; } = null!;
+        public DbSet<RedirectEvent> RedirectEvents { get; set; } = null!;
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -24,6 +25,13 @@ namespace test_ins.Persistence
                 b.HasIndex(s => s.ShortCode).IsUnique();
                 b.Property(s => s.ShortCode).IsRequired();
                 b.Property(s => s.Destination).IsRequired();
+            });
+
+            modelBuilder.Entity<RedirectEvent>(b =>
+            {
+                b.HasKey(e => e.Id);
+                b.HasIndex(e => new { e.ShortUrlId, e.Timestamp });
+                b.Property(e => e.Timestamp).IsRequired();
             });
 
             base.OnModelCreating(modelBuilder);

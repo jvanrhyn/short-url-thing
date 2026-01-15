@@ -4,6 +4,7 @@ using System.Linq;
 using test_ins.Models;
 using test_ins.Persistence;
 using Microsoft.EntityFrameworkCore;
+using test_ins.Models;
 
 namespace test_ins.Repositories
 {
@@ -60,9 +61,27 @@ namespace test_ins.Repositories
             var s = _db.ShortUrls.Find(id);
             if (s != null)
             {
+                // also remove related redirect events
+                var events = _db.RedirectEvents.Where(e => e.ShortUrlId == id).ToList();
+                if (events.Any())
+                {
+                    _db.RedirectEvents.RemoveRange(events);
+                }
+
                 _db.ShortUrls.Remove(s);
                 _db.SaveChanges();
             }
+        }
+
+        public void AddRedirectEvent(Models.RedirectEvent e)
+        {
+            _db.RedirectEvents.Add(e);
+            _db.SaveChanges();
+        }
+
+        public System.Collections.Generic.IEnumerable<Models.RedirectEvent> ListRedirectEvents(Guid shortUrlId, DateTimeOffset since)
+        {
+            return _db.RedirectEvents.Where(e => e.ShortUrlId == shortUrlId && e.Timestamp >= since).OrderBy(e => e.Timestamp).AsNoTracking().ToList();
         }
 
         public void IncrementRedirect(ShortUrl s)
@@ -70,6 +89,11 @@ namespace test_ins.Repositories
             s.RedirectCount++;
             s.UpdatedAt = DateTimeOffset.UtcNow;
             _db.ShortUrls.Update(s);
+            _db.SaveChanges();
+
+            // add redirect event row for analytics
+            var ev = new Models.RedirectEvent { ShortUrlId = s.Id, Timestamp = DateTimeOffset.UtcNow };
+            _db.RedirectEvents.Add(ev);
             _db.SaveChanges();
         }
     }

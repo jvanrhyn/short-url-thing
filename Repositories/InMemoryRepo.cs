@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using test_ins.Models;
+using System.Collections;
 
 namespace test_ins.Repositories
 {
@@ -11,6 +12,7 @@ namespace test_ins.Repositories
         private readonly ConcurrentDictionary<Guid, User> _users = new();
         private readonly ConcurrentDictionary<Guid, ShortUrl> _urls = new();
         private readonly ConcurrentDictionary<string, Guid> _shortCodeIndex = new(StringComparer.OrdinalIgnoreCase);
+        private readonly ConcurrentDictionary<Guid, System.Collections.Concurrent.ConcurrentBag<Models.RedirectEvent>> _redirectEvents = new();
 
         public InMemoryRepo()
         {
@@ -59,7 +61,23 @@ namespace test_ins.Repositories
             if (_urls.TryRemove(id, out var s))
             {
                 _shortCodeIndex.TryRemove(s.ShortCode, out _);
+                _redirectEvents.TryRemove(id, out _);
             }
+        }
+
+        public void AddRedirectEvent(Models.RedirectEvent e)
+        {
+            var bag = _redirectEvents.GetOrAdd(e.ShortUrlId, _ => new System.Collections.Concurrent.ConcurrentBag<Models.RedirectEvent>());
+            bag.Add(e);
+        }
+
+        public System.Collections.Generic.IEnumerable<Models.RedirectEvent> ListRedirectEvents(Guid shortUrlId, DateTimeOffset since)
+        {
+            if (_redirectEvents.TryGetValue(shortUrlId, out var bag))
+            {
+                return bag.Where(e => e.Timestamp >= since).OrderBy(e => e.Timestamp).ToList();
+            }
+            return System.Array.Empty<Models.RedirectEvent>();
         }
 
         public void IncrementRedirect(ShortUrl s)
@@ -67,6 +85,10 @@ namespace test_ins.Repositories
             s.RedirectCount++;
             s.UpdatedAt = System.DateTimeOffset.UtcNow;
             _urls[s.Id] = s;
+
+            // record a redirect event for basic analytics
+            var bag = _redirectEvents.GetOrAdd(s.Id, _ => new System.Collections.Concurrent.ConcurrentBag<Models.RedirectEvent>());
+            bag.Add(new Models.RedirectEvent { ShortUrlId = s.Id, Timestamp = DateTimeOffset.UtcNow });
         }
     }
 }

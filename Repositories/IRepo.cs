@@ -20,5 +20,9 @@ namespace test_ins.Repositories
         void UpdateShortUrl(ShortUrl s);
         void DeleteShortUrl(Guid id);
         void IncrementRedirect(ShortUrl s);
+
+        // Redirect events for analytics
+        void AddRedirectEvent(Models.RedirectEvent e);
+        System.Collections.Generic.IEnumerable<Models.RedirectEvent> ListRedirectEvents(Guid shortUrlId, DateTimeOffset since);
     }
 }

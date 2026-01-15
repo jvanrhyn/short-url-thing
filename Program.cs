@@ -195,7 +195,7 @@ app.MapDelete("/urls/{id}", (Guid id, HttpContext ctx, IUrlService urlService) =
     return Results.NoContent();
 });
 
-app.MapGet("/urls/{id}/stats", (Guid id, HttpContext ctx, IUrlService urlService) =>
+app.MapGet("/urls/{id}/stats", (Guid id, HttpContext ctx, IUrlService urlService, IRepo repo) =>
 {
     if (!ctx.Items.TryGetValue("User", out var u) || u is not User user)
         return Results.Unauthorized();
@@ -204,7 +204,15 @@ app.MapGet("/urls/{id}/stats", (Guid id, HttpContext ctx, IUrlService urlService
     if (s == null || s.OwnerUserId != user.UserId)
         return Results.NotFound(new { error = "not_found" });
 
-    return Results.Ok(new { redirects = s.RedirectCount, createdAt = s.CreatedAt, updatedAt = s.UpdatedAt });
+    // provide last-7-days daily aggregation
+    var since = DateTimeOffset.UtcNow.AddDays(-7);
+    var events = repo.ListRedirectEvents(id, since);
+    var daily = events.GroupBy(e => e.Timestamp.UtcDateTime.Date)
+                      .Select(g => new { date = g.Key, count = g.Count() })
+                      .OrderBy(d => d.date)
+                      .ToList();
+
+    return Results.Ok(new { redirects = s.RedirectCount, createdAt = s.CreatedAt, updatedAt = s.UpdatedAt, dailyCounts = daily });
 });
 
 app.MapGet("/r/{shortCode}", (string shortCode, IUrlService urlService, ILogger<Program> logger) =>

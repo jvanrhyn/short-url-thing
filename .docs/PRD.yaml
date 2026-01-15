@@ -1,0 +1,171 @@
+prd:
+  product_name: url-shortener-api-platform
+  version: 1.0.0
+
+  overview:
+    summary: api-first url shortener platform for authenticated users
+    goals:
+      - reliable and performant url redirection
+      - self-service url and profile management via api
+      - transparent usage tracking and analytics
+      - extensible foundation for future capabilities
+    non_goals:
+      - anonymous public url creation
+      - marketing landing pages
+      - qr code generation
+      - link-in-bio or preview pages
+
+  problem_statement:
+    description: >
+      teams require a governed, auditable, programmatic way to shorten,
+      manage, and observe urls without relying on consumer-focused tools.
+
+  users:
+    primary:
+      - developers
+      - platform_operations
+    secondary:
+      - product_teams
+      - security_compliance
+
+  authentication_and_profiles:
+    user_account:
+      attributes:
+        - user_id
+        - email
+        - status
+        - api_credentials
+    supported_statuses:
+      - active
+      - suspended
+      - deleted
+    capabilities:
+      - view_profile
+      - update_profile_metadata
+      - rotate_api_keys
+      - deactivate_account
+
+  core_use_cases:
+    - create_short_url
+    - redirect_short_url
+    - manage_urls
+    - track_usage_and_analytics
+
+  functional_requirements:
+    user_management:
+      - authenticated_user_access_required
+      - api_based_authentication
+      - api_key_rotation_supported
+      - suspended_users_blocked
+    url_creation:
+      - generate_unique_short_code
+      - validate_destination_url
+      - support_custom_alias
+      - support_expiry_date
+      - associate_url_with_user
+    url_redirection:
+      - redirect_active_urls
+      - block_suspended_urls
+      - block_deleted_urls
+      - block_expired_urls
+      - record_redirect_event
+    url_lifecycle_management:
+      - suspend_url
+      - reactivate_url
+      - delete_url
+      - audit_status_changes
+    analytics_and_tracking:
+      - record_each_redirect
+      - expose_usage_metrics
+      - support_time_based_aggregation
+
+  non_functional_requirements:
+    performance:
+      redirect_latency_p95_ms: 50
+      analytics_query_latency_p95_ms: 500
+    availability:
+      redirect_service_percent: 99.9
+      management_api_percent: 99.5
+    security:
+      authentication_required: true
+      secure_api_key_storage: true
+      rate_limiting_enabled: true
+      pii_logging_allowed: false
+    scalability:
+      redirects_per_day: millions
+      horizontal_scaling: true
+      independent_analytics_scaling: true
+
+  api_design:
+    authentication:
+      type: api_key_or_token
+    endpoints:
+      - method: POST
+        path: /users
+      - method: GET
+        path: /users/me
+      - method: POST
+        path: /urls
+      - method: GET
+        path: /urls
+      - method: GET
+        path: /urls/{id}
+      - method: PATCH
+        path: /urls/{id}
+      - method: DELETE
+        path: /urls/{id}
+      - method: GET
+        path: /urls/{id}/stats
+      - method: GET
+        path: /r/{shortCode}
+
+  status_models:
+    user_status:
+      - active
+      - suspended
+      - deleted
+    url_status:
+      - active
+      - suspended
+      - expired
+      - deleted
+
+  auditing_and_observability:
+    mutation_logging: true
+    audit_fields:
+      - actor
+      - timestamp
+      - action
+      - target_entity
+    logs_immutable: true
+
+  error_handling:
+    consistent_error_structure: true
+    explicit_error_codes: true
+    internal_details_exposed: false
+    rate_limit_retry_hints: true
+
+  assumptions:
+    - authenticated_users_only
+    - api_first_usage
+    - anonymous_redirect_consumers
+
+  rollout:
+    phase_1:
+      - url_shortening
+      - user_profiles
+      - basic_analytics
+    phase_2:
+      - custom_domains
+      - rate_tiers
+      - webhook_notifications
+    phase_3:
+      - billing
+      - advanced_analytics
+      - ai_insights
+
+  success_metrics:
+    url_creation_time_seconds: 1
+    redirect_success_rate_percent: 99.99
+    broken_link_reduction: measurable
+    internal_service_adoption: increasing
