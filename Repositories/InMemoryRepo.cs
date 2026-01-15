@@ -22,6 +22,7 @@ namespace test_ins.Repositories
             {
                 Email = "dev@example.local",
                 ApiKey = "dev-api-key-123",
+                IsAdmin = true
             };
             _users[user.UserId] = user;
         }

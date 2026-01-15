@@ -153,6 +153,7 @@ app.MapPost("/users", (User user, IRepo repo, ILogger<Program> logger) =>
 // Rate tier endpoints
 app.MapGet("/rate-tiers", (IEnumerable<test_ins.Models.RateTier> tiers) => Results.Ok(tiers));
 
+// allow self-service for non-admins but restrict highest tier to admin only
 app.MapPatch("/users/me/rate-limit", (RateLimitRequest body, HttpContext ctx, IRepo repo, IEnumerable<test_ins.Models.RateTier> tiers) =>
 {
     if (!ctx.Items.TryGetValue("User", out var u) || u is not User user)
@@ -162,9 +163,69 @@ app.MapPatch("/users/me/rate-limit", (RateLimitRequest body, HttpContext ctx, IR
     if (tier == null)
         return Results.BadRequest(new { error = "invalid_tier" });
 
+    // disallow non-admin from selecting enterprise tier
+    if (!user.IsAdmin && string.Equals(tier.Name, "enterprise", StringComparison.OrdinalIgnoreCase))
+        return Results.Forbid();
+
     user.RateLimitRpm = tier.RequestsPerMinute;
     repo.UpdateUser(user);
+
+    // audit
+    repo.AddAuditEvent(new test_ins.Models.AuditEvent
+    {
+        ActorUserId = user.UserId,
+        Action = "user:set-tier",
+        TargetEntityType = "User",
+        TargetEntityId = user.UserId,
+        Details = $"{{\"tier\":\"{tier.Name}\"}}"
+    });
+
     return Results.Ok(new { rate_limit_rpm = user.RateLimitRpm, tier = tier.Name });
+});
+
+// ADMIN: list users and manage user rate tiers
+app.MapGet("/admin/users", (HttpContext ctx, IRepo repo) =>
+{
+    if (!ctx.Items.TryGetValue("User", out var u) || u is not User user)
+        return Results.Unauthorized();
+
+    if (!user.IsAdmin)
+        return Results.Forbid();
+
+    var list = repo.ListUsers();
+    return Results.Ok(list);
+});
+
+app.MapPatch("/admin/users/{id}/rate-tier", (Guid id, RateLimitRequest body, HttpContext ctx, IRepo repo, IEnumerable<test_ins.Models.RateTier> tiers) =>
+{
+    if (!ctx.Items.TryGetValue("User", out var u) || u is not User user)
+        return Results.Unauthorized();
+
+    if (!user.IsAdmin)
+        return Results.Forbid();
+
+    var target = repo.GetUser(id);
+    if (target == null)
+        return Results.NotFound(new { error = "not_found" });
+
+    var tier = tiers.FirstOrDefault(t => string.Equals(t.Name, body.TierName, StringComparison.OrdinalIgnoreCase));
+    if (tier == null)
+        return Results.BadRequest(new { error = "invalid_tier" });
+
+    target.RateLimitRpm = tier.RequestsPerMinute;
+    repo.UpdateUser(target);
+
+    // audit - actor is admin
+    repo.AddAuditEvent(new test_ins.Models.AuditEvent
+    {
+        ActorUserId = user.UserId,
+        Action = "admin:user:set-tier",
+        TargetEntityType = "User",
+        TargetEntityId = target.UserId,
+        Details = $"{{\"tier\":\"{tier.Name}\"}}"
+    });
+
+    return Results.Ok(new { userId = target.UserId, rate_limit_rpm = target.RateLimitRpm, tier = tier.Name });
 });
 
 app.MapGet("/users/me", (HttpContext ctx) =>

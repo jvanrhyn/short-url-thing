@@ -10,5 +10,7 @@ namespace test_ins.Models
         public string ApiKey { get; set; } = string.Empty; // dev-only: in-memory
         // Per-user rate limit (requests per minute). Null => use default tier
         public int? RateLimitRpm { get; set; }
+        // Admin flag - indicates user can manage tiers and view all users
+        public bool IsAdmin { get; set; } = false;
     }
 }
