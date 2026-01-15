@@ -4,7 +4,6 @@ using System.Linq;
 using test_ins.Models;
 using test_ins.Persistence;
 using Microsoft.EntityFrameworkCore;
-using test_ins.Models;
 
 namespace test_ins.Repositories
 {
