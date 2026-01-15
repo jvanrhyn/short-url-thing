@@ -7,3 +7,5 @@
 2026-01-15 | feature/redirect-events-metrics | add redirect event model, repo methods, migrations, wire IncrementRedirect to persist events; add /urls/{id}/stats daily aggregation for last 7 days; add unit test verifying in-memory event recording and change tracker entry. | scope: analytics; tests | risk: low | breaking_change: false
 
 2026-01-15 | feature/audit-trail | add AuditEvent model, DB migration, repo methods, record audits for user create and shorturl create/update/delete, add audit query endpoints for shorturl and user, add test scaffolding and CHANGE_TRACKER entry. | scope: audit logging | risk: low | breaking_change: false
+
+2026-01-15 | feature/rate-limiting | add in-memory fixed-window per-user rate limiting middleware, configuration via `RateLimiting` section, excluded paths `/r/` and `/health`, return 429 with `Retry-After` when exceeded; add test scaffold and CHANGE_TRACKER entry. | scope: rate limiting | risk: low | breaking_change: false

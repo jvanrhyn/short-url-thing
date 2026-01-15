@@ -46,6 +46,9 @@ builder.Services.AddSwaggerGen(options =>
     });
 });
 
+// configure rate limiting options from configuration
+builder.Services.Configure<test_ins.Middleware.RateLimitOptions>(builder.Configuration.GetSection("RateLimiting"));
+
 var app = builder.Build();
 
 try
@@ -59,6 +62,9 @@ try
     }
 
     app.UseApiKeyAuth();
+
+    // Rate limiting middleware (should run after API key auth so we can enforce per-user limits)
+    app.UseRateLimiting();
 
     // Apply pending EF Core migrations at startup when Postgres is configured (safe for dev/demo use). In production consider an explicit migration pipeline.
     using (var scope = app.Services.CreateScope())
