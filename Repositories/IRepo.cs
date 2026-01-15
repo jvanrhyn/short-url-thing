@@ -29,5 +29,13 @@ namespace test_ins.Repositories
         // Audit events for mutation logging
         void AddAuditEvent(Models.AuditEvent e);
         System.Collections.Generic.IEnumerable<Models.AuditEvent> ListAuditEvents(string targetEntityType, Guid targetEntityId, DateTimeOffset since);
+
+        // Rate tiers (DB-backed)
+        Models.RateTierEntity CreateRateTier(Models.RateTierEntity r);
+        Models.RateTierEntity? GetRateTier(Guid id);
+        Models.RateTierEntity? GetRateTierByName(string name);
+        System.Collections.Generic.IEnumerable<Models.RateTierEntity> ListRateTiers();
+        void UpdateRateTier(Models.RateTierEntity r);
+        void DeleteRateTier(Guid id);
     }
 }

@@ -14,7 +14,18 @@ namespace test_ins.Repositories
         private readonly ConcurrentDictionary<string, Guid> _shortCodeIndex = new(StringComparer.OrdinalIgnoreCase);
         private readonly ConcurrentDictionary<Guid, System.Collections.Concurrent.ConcurrentBag<Models.RedirectEvent>> _redirectEvents = new();
         private readonly ConcurrentDictionary<Guid, System.Collections.Concurrent.ConcurrentBag<Models.AuditEvent>> _auditEvents = new();
+        private readonly ConcurrentDictionary<Guid, Models.RateTierEntity> _rateTiers = new();
 
+        // seed some default tiers
+        private void SeedDefaultTiers()
+        {
+            var free = new Models.RateTierEntity { Name = "free", RequestsPerMinute = 60, Description = "Free tier" };
+            var team = new Models.RateTierEntity { Name = "team", RequestsPerMinute = 300, Description = "Team tier" };
+            var enterprise = new Models.RateTierEntity { Name = "enterprise", RequestsPerMinute = 2000, Description = "Enterprise tier" };
+            _rateTiers[free.Id] = free;
+            _rateTiers[team.Id] = team;
+            _rateTiers[enterprise.Id] = enterprise;
+        }
         public InMemoryRepo()
         {
             // seed a default user for local dev
@@ -25,6 +36,8 @@ namespace test_ins.Repositories
                 IsAdmin = true
             };
             _users[user.UserId] = user;
+
+            SeedDefaultTiers();
         }
 
         // Users
@@ -98,6 +111,19 @@ namespace test_ins.Repositories
             }
             return System.Array.Empty<Models.AuditEvent>();
         }
+
+        // Rate tier operations
+        public Models.RateTierEntity CreateRateTier(Models.RateTierEntity r)
+        {
+            _rateTiers[r.Id] = r;
+            return r;
+        }
+
+        public Models.RateTierEntity? GetRateTier(Guid id) => _rateTiers.TryGetValue(id, out var r) ? r : null;
+        public Models.RateTierEntity? GetRateTierByName(string name) => _rateTiers.Values.FirstOrDefault(t => string.Equals(t.Name, name, StringComparison.OrdinalIgnoreCase));
+        public System.Collections.Generic.IEnumerable<Models.RateTierEntity> ListRateTiers() => _rateTiers.Values;
+        public void UpdateRateTier(Models.RateTierEntity r) => _rateTiers[r.Id] = r;
+        public void DeleteRateTier(Guid id) => _rateTiers.TryRemove(id, out _);
 
         public void IncrementRedirect(ShortUrl s)
         {

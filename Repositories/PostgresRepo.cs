@@ -109,6 +109,33 @@ namespace test_ins.Repositories
             return _db.AuditEvents.Where(a => a.TargetEntityType == targetEntityType && a.TargetEntityId == targetEntityId && a.Timestamp >= since).OrderBy(a => a.Timestamp).AsNoTracking().ToList();
         }
 
+        // Rate tier operations
+        public Models.RateTierEntity CreateRateTier(Models.RateTierEntity r)
+        {
+            _db.Add(r);
+            _db.SaveChanges();
+            return r;
+        }
+
+        public Models.RateTierEntity? GetRateTier(Guid id) => _db.Set<Models.RateTierEntity>().Find(id);
+        public Models.RateTierEntity? GetRateTierByName(string name) => _db.Set<Models.RateTierEntity>().FirstOrDefault(t => t.Name == name);
+        public System.Collections.Generic.IEnumerable<Models.RateTierEntity> ListRateTiers() => _db.Set<Models.RateTierEntity>().AsNoTracking().ToList();
+        public void UpdateRateTier(Models.RateTierEntity r)
+        {
+            _db.Set<Models.RateTierEntity>().Update(r);
+            _db.SaveChanges();
+        }
+
+        public void DeleteRateTier(Guid id)
+        {
+            var r = _db.Set<Models.RateTierEntity>().Find(id);
+            if (r != null)
+            {
+                _db.Set<Models.RateTierEntity>().Remove(r);
+                _db.SaveChanges();
+            }
+        }
+
         public void IncrementRedirect(ShortUrl s)
         {
             s.RedirectCount++;

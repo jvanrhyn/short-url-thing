@@ -49,15 +49,8 @@ builder.Services.AddSwaggerGen(options =>
 // configure rate limiting options from configuration
 builder.Services.Configure<test_ins.Middleware.RateLimitOptions>(builder.Configuration.GetSection("RateLimiting"));
 
-// register available rate tiers (simple in-memory list for now)
-var rateTiers = new List<test_ins.Models.RateTier>
-{
-    new test_ins.Models.RateTier { Name = "free", RequestsPerMinute = 60, Description = "Free tier - 60 rpm" },
-    new test_ins.Models.RateTier { Name = "team", RequestsPerMinute = 300, Description = "Team tier - 300 rpm" },
-    new test_ins.Models.RateTier { Name = "enterprise", RequestsPerMinute = 2000, Description = "Enterprise tier - 2000 rpm" }
-};
-builder.Services.AddSingleton(rateTiers);
-
+// Rate tiers are DB-backed now; repo provides access
+// (fallback to seed in-memory repo for local dev is handled in InMemoryRepo)
 
 var app = builder.Build();
 
@@ -151,15 +144,15 @@ app.MapPost("/users", (User user, IRepo repo, ILogger<Program> logger) =>
 });
 
 // Rate tier endpoints
-app.MapGet("/rate-tiers", (IEnumerable<test_ins.Models.RateTier> tiers) => Results.Ok(tiers));
+app.MapGet("/rate-tiers", (IRepo repo) => Results.Ok(repo.ListRateTiers()));
 
 // allow self-service for non-admins but restrict highest tier to admin only
-app.MapPatch("/users/me/rate-limit", (RateLimitRequest body, HttpContext ctx, IRepo repo, IEnumerable<test_ins.Models.RateTier> tiers) =>
+app.MapPatch("/users/me/rate-limit", (RateLimitRequest body, HttpContext ctx, IRepo repo) =>
 {
     if (!ctx.Items.TryGetValue("User", out var u) || u is not User user)
         return Results.Unauthorized();
 
-    var tier = tiers.FirstOrDefault(t => string.Equals(t.Name, body.TierName, StringComparison.OrdinalIgnoreCase));
+    var tier = repo.GetRateTierByName(body.TierName);
     if (tier == null)
         return Results.BadRequest(new { error = "invalid_tier" });
 
@@ -196,7 +189,71 @@ app.MapGet("/admin/users", (HttpContext ctx, IRepo repo) =>
     return Results.Ok(list);
 });
 
-app.MapPatch("/admin/users/{id}/rate-tier", (Guid id, RateLimitRequest body, HttpContext ctx, IRepo repo, IEnumerable<test_ins.Models.RateTier> tiers) =>
+// Admin CRUD for rate tiers
+app.MapGet("/admin/tiers", (HttpContext ctx, IRepo repo) =>
+{
+    if (!ctx.Items.TryGetValue("User", out var u) || u is not User user)
+        return Results.Unauthorized();
+    if (!user.IsAdmin)
+        return Results.Forbid();
+
+    return Results.Ok(repo.ListRateTiers());
+});
+
+app.MapPost("/admin/tiers", (RateTierEntity body, HttpContext ctx, IRepo repo) =>
+{
+    if (!ctx.Items.TryGetValue("User", out var u) || u is not User user)
+        return Results.Unauthorized();
+    if (!user.IsAdmin)
+        return Results.Forbid();
+
+    // validate unique name
+    if (repo.GetRateTierByName(body.Name) != null)
+        return Results.BadRequest(new { error = "name_exists" });
+
+    var created = repo.CreateRateTier(body);
+    return Results.Created($"/admin/tiers/{created.Id}", created);
+});
+
+app.MapPatch("/admin/tiers/{id}", (Guid id, RateTierEntity body, HttpContext ctx, IRepo repo) =>
+{
+    if (!ctx.Items.TryGetValue("User", out var u) || u is not User user)
+        return Results.Unauthorized();
+    if (!user.IsAdmin)
+        return Results.Forbid();
+
+    var existing = repo.GetRateTier(id);
+    if (existing == null)
+        return Results.NotFound(new { error = "not_found" });
+
+    // ensure name uniqueness if changed
+    if (!string.Equals(existing.Name, body.Name, StringComparison.OrdinalIgnoreCase) && repo.GetRateTierByName(body.Name) != null)
+        return Results.BadRequest(new { error = "name_exists" });
+
+    existing.Name = body.Name;
+    existing.RequestsPerMinute = body.RequestsPerMinute;
+    existing.Description = body.Description;
+    repo.UpdateRateTier(existing);
+
+    return Results.Ok(existing);
+});
+
+app.MapDelete("/admin/tiers/{id}", (Guid id, HttpContext ctx, IRepo repo) =>
+{
+    if (!ctx.Items.TryGetValue("User", out var u) || u is not User user)
+        return Results.Unauthorized();
+    if (!user.IsAdmin)
+        return Results.Forbid();
+
+    var existing = repo.GetRateTier(id);
+    if (existing == null)
+        return Results.NotFound(new { error = "not_found" });
+
+    repo.DeleteRateTier(id);
+    return Results.NoContent();
+});
+
+app.MapPatch("/admin/users/{id}/rate-tier", (Guid id, RateLimitRequest body, HttpContext ctx, IRepo repo) =>
 {
     if (!ctx.Items.TryGetValue("User", out var u) || u is not User user)
         return Results.Unauthorized();
@@ -208,7 +265,7 @@ app.MapPatch("/admin/users/{id}/rate-tier", (Guid id, RateLimitRequest body, Htt
     if (target == null)
         return Results.NotFound(new { error = "not_found" });
 
-    var tier = tiers.FirstOrDefault(t => string.Equals(t.Name, body.TierName, StringComparison.OrdinalIgnoreCase));
+    var tier = repo.GetRateTierByName(body.TierName);
     if (tier == null)
         return Results.BadRequest(new { error = "invalid_tier" });
 

@@ -13,3 +13,5 @@
 2026-01-15 | feature/rate-limiting | add per-user rate limit support: `User.RateLimitRpm`, DB migration, `IRepo.UpdateUser`, `PATCH /users/me/rate-limit` endpoint, `GET /rate-tiers` to list available tiers, middleware honors per-user limit when set. | scope: rate tiers | risk: low | breaking_change: false
 
 2026-01-15 | feature/admin-rate-tiers | add admin-managed tier assignment and validation: `User.IsAdmin`, DB migration, admin endpoints `GET /admin/users` and `PATCH /admin/users/{id}/rate-tier`, self-service tier assignment restricted for non-admins (enterprise requires admin), audit events added for tier changes, and tests scaffold. | scope: admin management | risk: low | breaking_change: false
+
+2026-01-15 | feature/admin-rate-tiers | make rate tiers DB-backed: add `RateTierEntity` model, `RateTierEntities` table, repo CRUD methods (`CreateRateTier`, `GetRateTier`, `GetRateTierByName`, `ListRateTiers`, `UpdateRateTier`, `DeleteRateTier`), seed default tiers in migration and in-memory repo, and add admin CRUD endpoints `GET/POST/PATCH/DELETE /admin/tiers`. | scope: admin management, db | risk: low | breaking_change: false

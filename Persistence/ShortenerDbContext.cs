@@ -45,6 +45,15 @@ namespace test_ins.Persistence
                 b.Property(a => a.TargetEntityType).IsRequired().HasMaxLength(64);
             });
 
+            modelBuilder.Entity<RateTierEntity>(b =>
+            {
+                b.HasKey(r => r.Id);
+                b.HasIndex(r => r.Name).IsUnique();
+                b.Property(r => r.Name).IsRequired().HasMaxLength(64);
+                b.Property(r => r.RequestsPerMinute).IsRequired();
+                b.Property(r => r.Description).IsRequired(false);
+            });
+
             base.OnModelCreating(modelBuilder);
         }
     }
