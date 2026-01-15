@@ -68,6 +68,13 @@ namespace test_ins.Repositories
                     _db.RedirectEvents.RemoveRange(events);
                 }
 
+                // also remove related audit events
+                var audits = _db.AuditEvents.Where(a => a.TargetEntityId == id && a.TargetEntityType == "ShortUrl").ToList();
+                if (audits.Any())
+                {
+                    _db.AuditEvents.RemoveRange(audits);
+                }
+
                 _db.ShortUrls.Remove(s);
                 _db.SaveChanges();
             }
@@ -82,6 +89,17 @@ namespace test_ins.Repositories
         public System.Collections.Generic.IEnumerable<Models.RedirectEvent> ListRedirectEvents(Guid shortUrlId, DateTimeOffset since)
         {
             return _db.RedirectEvents.Where(e => e.ShortUrlId == shortUrlId && e.Timestamp >= since).OrderBy(e => e.Timestamp).AsNoTracking().ToList();
+        }
+
+        public void AddAuditEvent(Models.AuditEvent e)
+        {
+            _db.AuditEvents.Add(e);
+            _db.SaveChanges();
+        }
+
+        public System.Collections.Generic.IEnumerable<Models.AuditEvent> ListAuditEvents(string targetEntityType, Guid targetEntityId, DateTimeOffset since)
+        {
+            return _db.AuditEvents.Where(a => a.TargetEntityType == targetEntityType && a.TargetEntityId == targetEntityId && a.Timestamp >= since).OrderBy(a => a.Timestamp).AsNoTracking().ToList();
         }
 
         public void IncrementRedirect(ShortUrl s)

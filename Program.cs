@@ -120,6 +120,17 @@ app.MapPost("/users", (User user, IRepo repo, ILogger<Program> logger) =>
     user.ApiKey = Guid.NewGuid().ToString();
     repo.AddUser(user);
     logger.LogInformation("Created new user {UserId}", user.UserId);
+
+    // audit (system actor)
+    repo.AddAuditEvent(new test_ins.Models.AuditEvent
+    {
+        ActorUserId = null,
+        Action = "user:create",
+        TargetEntityType = "User",
+        TargetEntityId = user.UserId,
+        Details = $"{{\"email\":\"{user.Email}\"}}"
+    });
+
     return Results.Created($"/users/{user.UserId}", user);
 });
 
@@ -190,6 +201,19 @@ app.MapDelete("/urls/{id}", (Guid id, HttpContext ctx, IUrlService urlService) =
     if (s == null || s.OwnerUserId != user.UserId)
         return Results.NotFound(new { error = "not_found" });
 
+    urlService.Delete(id);
+    return Results.NoContent();
+});
+
+app.MapDelete("/urls/{id}", (Guid id, HttpContext ctx, IUrlService urlService) =>
+{
+    if (!ctx.Items.TryGetValue("User", out var u) || u is not User user)
+        return Results.Unauthorized();
+
+    var s = urlService.GetById(id);
+    if (s == null || s.OwnerUserId != user.UserId)
+        return Results.NotFound(new { error = "not_found" });
+
     s.Status = UrlStatus.Deleted;
     urlService.Update(s, new ShortUrlUpdate { });
     return Results.NoContent();
@@ -212,7 +236,11 @@ app.MapGet("/urls/{id}/stats", (Guid id, HttpContext ctx, IUrlService urlService
                       .OrderBy(d => d.date)
                       .ToList();
 
-    return Results.Ok(new { redirects = s.RedirectCount, createdAt = s.CreatedAt, updatedAt = s.UpdatedAt, dailyCounts = daily });
+    // also expose recent audit events for the short url (last 7 days)
+    var audits = repo.ListAuditEvents("ShortUrl", id, since)
+                    .Select(a => new { a.Timestamp, a.Action, a.ActorUserId, a.Details });
+
+    return Results.Ok(new { redirects = s.RedirectCount, createdAt = s.CreatedAt, updatedAt = s.UpdatedAt, dailyCounts = daily, audits });
 });
 
 app.MapGet("/r/{shortCode}", (string shortCode, IUrlService urlService, ILogger<Program> logger) =>
@@ -238,5 +266,35 @@ app.MapGet("/r/{shortCode}", (string shortCode, IUrlService urlService, ILogger<
 
 // Health endpoint used by docker-compose healthcheck (no auth required)
 app.MapGet("/health", () => Results.Ok(new { status = "ok" }));
+
+// Audit endpoints (authenticated)
+app.MapGet("/audits/shorturl/{id}", (Guid id, HttpContext ctx, IRepo repo) =>
+{
+    if (!ctx.Items.TryGetValue("User", out var u) || u is not User user)
+        return Results.Unauthorized();
+
+    var s = repo.GetShortUrl(id);
+    if (s == null || s.OwnerUserId != user.UserId)
+        return Results.NotFound(new { error = "not_found" });
+
+    var since = DateTimeOffset.UtcNow.AddDays(-7);
+    var audits = repo.ListAuditEvents("ShortUrl", id, since)
+                    .Select(a => new { a.Timestamp, a.Action, a.ActorUserId, a.Details });
+    return Results.Ok(audits);
+});
+
+app.MapGet("/audits/user/{id}", (Guid id, HttpContext ctx, IRepo repo) =>
+{
+    if (!ctx.Items.TryGetValue("User", out var u) || u is not User user)
+        return Results.Unauthorized();
+
+    if (user.UserId != id)
+        return Results.Forbid();
+
+    var since = DateTimeOffset.UtcNow.AddDays(-7);
+    var audits = repo.ListAuditEvents("User", id, since)
+                    .Select(a => new { a.Timestamp, a.Action, a.ActorUserId, a.Details });
+    return Results.Ok(audits);
+});
 
 app.Run();

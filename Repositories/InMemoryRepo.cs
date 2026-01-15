@@ -13,6 +13,7 @@ namespace test_ins.Repositories
         private readonly ConcurrentDictionary<Guid, ShortUrl> _urls = new();
         private readonly ConcurrentDictionary<string, Guid> _shortCodeIndex = new(StringComparer.OrdinalIgnoreCase);
         private readonly ConcurrentDictionary<Guid, System.Collections.Concurrent.ConcurrentBag<Models.RedirectEvent>> _redirectEvents = new();
+        private readonly ConcurrentDictionary<Guid, System.Collections.Concurrent.ConcurrentBag<Models.AuditEvent>> _auditEvents = new();
 
         public InMemoryRepo()
         {
@@ -62,6 +63,7 @@ namespace test_ins.Repositories
             {
                 _shortCodeIndex.TryRemove(s.ShortCode, out _);
                 _redirectEvents.TryRemove(id, out _);
+                _auditEvents.TryRemove(id, out _);
             }
         }
 
@@ -78,6 +80,21 @@ namespace test_ins.Repositories
                 return bag.Where(e => e.Timestamp >= since).OrderBy(e => e.Timestamp).ToList();
             }
             return System.Array.Empty<Models.RedirectEvent>();
+        }
+
+        public void AddAuditEvent(Models.AuditEvent e)
+        {
+            var bag = _auditEvents.GetOrAdd(e.TargetEntityId, _ => new System.Collections.Concurrent.ConcurrentBag<Models.AuditEvent>());
+            bag.Add(e);
+        }
+
+        public System.Collections.Generic.IEnumerable<Models.AuditEvent> ListAuditEvents(string targetEntityType, Guid targetEntityId, DateTimeOffset since)
+        {
+            if (_auditEvents.TryGetValue(targetEntityId, out var bag))
+            {
+                return bag.Where(a => a.Timestamp >= since && string.Equals(a.TargetEntityType, targetEntityType, StringComparison.OrdinalIgnoreCase)).OrderBy(a => a.Timestamp).ToList();
+            }
+            return System.Array.Empty<Models.AuditEvent>();
         }
 
         public void IncrementRedirect(ShortUrl s)

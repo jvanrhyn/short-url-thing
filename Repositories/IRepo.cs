@@ -24,5 +24,9 @@ namespace test_ins.Repositories
         // Redirect events for analytics
         void AddRedirectEvent(Models.RedirectEvent e);
         System.Collections.Generic.IEnumerable<Models.RedirectEvent> ListRedirectEvents(Guid shortUrlId, DateTimeOffset since);
+
+        // Audit events for mutation logging
+        void AddAuditEvent(Models.AuditEvent e);
+        System.Collections.Generic.IEnumerable<Models.AuditEvent> ListAuditEvents(string targetEntityType, Guid targetEntityId, DateTimeOffset since);
     }
 }

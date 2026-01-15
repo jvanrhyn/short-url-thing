@@ -74,6 +74,17 @@ namespace test_ins.Services
 
             var created = _repo.CreateShortUrl(s);
             _logger.LogInformation("Created short URL {ShortCode} (id={Id}) for owner {OwnerId}", created.ShortCode, created.Id, owner.UserId);
+
+            // audit
+            _repo.AddAuditEvent(new Models.AuditEvent
+            {
+                ActorUserId = owner.UserId,
+                Action = "shorturl:create",
+                TargetEntityType = "ShortUrl",
+                TargetEntityId = created.Id,
+                Details = $"{{\"destination\":\"{created.Destination}\"}}"
+            });
+
             return created;
         }
 
@@ -91,7 +102,33 @@ namespace test_ins.Services
             if (update.ExpiresAt.HasValue)
                 s.ExpiresAt = update.ExpiresAt.Value;
             _repo.UpdateShortUrl(s);
+
+            // audit
+            _repo.AddAuditEvent(new Models.AuditEvent
+            {
+                ActorUserId = s.OwnerUserId,
+                Action = "shorturl:update",
+                TargetEntityType = "ShortUrl",
+                TargetEntityId = s.Id,
+                Details = $"{{\"status\":\"{s.Status}\"}}"
+            });
         }
-        public void Delete(Guid id) => _repo.DeleteShortUrl(id);
+
+        public void Delete(Guid id)
+        {
+            var s = _repo.GetShortUrl(id);
+            if (s != null)
+            {
+                _repo.DeleteShortUrl(id);
+                _repo.AddAuditEvent(new Models.AuditEvent
+                {
+                    ActorUserId = s.OwnerUserId,
+                    Action = "shorturl:delete",
+                    TargetEntityType = "ShortUrl",
+                    TargetEntityId = s.Id,
+                    Details = null
+                });
+            }
+        }
     }
 }
